@@ -1,7 +1,8 @@
 import mongoose from "mongoose";
+import { env } from './env.config.js';
 
 const connectDB = async () => {
-  const mongoUri = process.env.MONGODB_URI;
+  const mongoUri = env.MONGODB_URI;
 
   if (!mongoUri) {
     throw new Error("Falta la variable MONGODB_URI");

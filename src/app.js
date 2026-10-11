@@ -4,6 +4,9 @@ import usersRouter from "./routes/users.router.js";
 import storesRouter from "./routes/stores.router.js";
 import ordersRouter from "./routes/orders.router.js";
 
+import { notFoundHandler } from "./middlewares/notFound.middleware.js";
+import { errorHandler } from './middlewares/errorHandler.middleware.js';
+
 const app = express();
 
 app.use(cors());
@@ -33,5 +36,9 @@ app.use((req, res) => {
     message: "Ruta no encontrada"
   });
 });
+
+app.use(notFoundHandler);
+
+app.use(errorHandler);
 
 export default app;
