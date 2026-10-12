@@ -33,14 +33,12 @@ export const validateCreateUser = (data = {}) => {
         errors[field] = `El campo ${field} es obligatorio`;
     });
 
-
     const {
         firstName,
         lastName,
         email,
         password
     } = data;
-
 
     if (
         !errors.firstName &&
@@ -50,7 +48,6 @@ export const validateCreateUser = (data = {}) => {
             'El nombre tiene que ser de 4 a 16 caracteres de tipo letras';
     }
 
-
     if (
         !errors.lastName &&
         !expressions.lastName.test(lastName)
@@ -58,7 +55,6 @@ export const validateCreateUser = (data = {}) => {
         errors.lastName =
             'El apellido tiene que ser de 4 a 16 caracteres de tipo letras';
     }
-
 
     if (
         !errors.email &&
@@ -68,7 +64,6 @@ export const validateCreateUser = (data = {}) => {
             'El correo no es válido';
     }
 
-
     if (
         !errors.password &&
         !expressions.password.test(password)
@@ -76,7 +71,6 @@ export const validateCreateUser = (data = {}) => {
         errors.password =
             'La contraseña debe tener entre 4 y 12 caracteres';
     }
-
 
     return errors;
 };

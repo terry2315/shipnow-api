@@ -2,8 +2,6 @@ import { ERROR_DICTIONARY } from "../errors/errorDictionary.js";
 
 export const errorHandler = (error, req, res, next) => {
 
-    console.error('ERROR REAL:', error);
-
     if (error.isOperational) {
 
         return res.status(error.statusCode).json({

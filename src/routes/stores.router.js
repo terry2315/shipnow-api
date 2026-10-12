@@ -1,69 +1,23 @@
 import { Router } from "express";
-import StoreModel from "../models/store.model.js";
+import { asyncHandler } from '../utils/asyncHandler.js';
+import {
+  createStore,
+  getAllStores,
+  getStoreById,
+  updatedStore,
+  deleteStore,
+} from '../controllers/store.controller.js';
 
 const router = Router();
 
-router.get("/", async (req, res) => {
-  try {
-    const stores = await StoreModel.find();
-    res.json({ status: "success", payload: stores });
-  } catch (error) {
-    res.status(500).json({ status: "error", message: error.message });
-  }
-});
+router.post('/', asyncHandler(createStore));
 
-router.get("/:sid", async (req, res) => {
-  try {
-    const store = await StoreModel.findById(req.params.sid);
+router.get('/', asyncHandler(getAllStores));
 
-    if (!store) {
-      return res.status(404).json({ status: "error", message: "Comercio no encontrado" });
-    }
+router.get('/:sid', asyncHandler(getStoreById));
 
-    res.json({ status: "success", payload: store });
-  } catch (error) {
-    res.status(400).json({ status: "error", message: error.message });
-  }
-});
+router.patch('/:sid', asyncHandler(updatedStore));
 
-router.post("/", async (req, res) => {
-  try {
-    const store = await StoreModel.create(req.body);
-    res.status(201).json({ status: "success", payload: store });
-  } catch (error) {
-    res.status(400).json({ status: "error", message: error.message });
-  }
-});
-
-router.put("/:sid", async (req, res) => {
-  try {
-    const store = await StoreModel.findByIdAndUpdate(req.params.sid, req.body, {
-      new: true,
-      runValidators: true
-    });
-
-    if (!store) {
-      return res.status(404).json({ status: "error", message: "Comercio no encontrado" });
-    }
-
-    res.json({ status: "success", payload: store });
-  } catch (error) {
-    res.status(400).json({ status: "error", message: error.message });
-  }
-});
-
-router.delete("/:sid", async (req, res) => {
-  try {
-    const store = await StoreModel.findByIdAndDelete(req.params.sid);
-
-    if (!store) {
-      return res.status(404).json({ status: "error", message: "Comercio no encontrado" });
-    }
-
-    res.json({ status: "success", payload: store });
-  } catch (error) {
-    res.status(400).json({ status: "error", message: error.message });
-  }
-});
+router.delete('/:sid', asyncHandler(deleteStore));
 
 export default router;

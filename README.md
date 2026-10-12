@@ -1,376 +1,583 @@
-## Funcionamiento base de la API
+# ShipNow API
 
-ShipNow API es una aplicación backend construida con Node.js, Express y MongoDB.
+API REST desarrollada con **Node.js**, **Express** y **MongoDB** para gestionar usuarios, productos, tiendas y órdenes dentro del dominio de ShipNow.
 
-En su estado base, la API permite trabajar con tres entidades principales:
-
-* Usuarios
-* Comercios
-* Pedidos
-
-La idea del proyecto es simular una API simple de logística/envíos.
-
-Un usuario puede representar a un cliente.
-Un comercio representa el lugar desde donde sale el pedido.
-Un pedido representa una solicitud de envío asociada a un usuario y a un comercio.
-
-### Flujo principal
-
-El flujo básico de la API es:
-
-1. Crear un usuario.
-2. Crear un comercio.
-3. Crear un pedido usando el ID del usuario y el ID del comercio.
-4. Consultar los pedidos.
-5. Actualizar el estado de un pedido.
-
-El pedido contiene una lista de items, una dirección de entrega, un total calculado y un estado.
-
-### Entidades principales
-
-### User
-
-Representa a un usuario dentro del sistema.
-
-Campos principales:
-
-```json
-{
-  "firstName": "Martina",
-  "lastName": "Gómez",
-  "email": "martina@test.com",
-  "password": "123456",
-  "role": "customer"
-}
-```
-
-Roles disponibles:
-
-```txt
-admin
-customer
-store
-```
-
-En esta versión base, el usuario se usa principalmente como cliente del pedido.
+Este proyecto corresponde a la **Pre-entrega Módulo 1 — Estructura profesional de ShipNow**, cuyo objetivo principal es refactorizar la API a una arquitectura profesional por capas y centralizar la configuración de entorno.
 
 ---
 
-### Store
+## Objetivo de la pre-entrega
 
-Representa un comercio.
+La aplicación fue refactorizada utilizando una arquitectura de tres capas:
 
-Campos principales:
-
-```json
-{
-  "name": "Kiosco Centro",
-  "address": "Av. Siempre Viva 742",
-  "owner": "ID_DEL_USUARIO"
-}
+```text
+Router
+  ↓
+Controller
+  ↓
+Service
+  ↓
+Repository
+  ↓
+Model / MongoDB
 ```
 
-El campo `owner` guarda el ID de un usuario asociado al comercio.
+Cada capa posee una responsabilidad específica:
+
+- **Router:** conecta el endpoint HTTP con el Controller correspondiente.
+- **Controller:** recibe `req` y `res`, llama al Service y construye la respuesta HTTP.
+- **Service:** contiene la lógica de negocio, validaciones y reglas del dominio.
+- **Repository:** encapsula el acceso a MongoDB mediante Mongoose.
+- **Model:** define únicamente la estructura de los documentos almacenados en MongoDB.
 
 ---
 
-### Order
+## Tecnologías utilizadas
 
-Representa un pedido o envío.
+- Node.js
+- Express
+- MongoDB
+- Mongoose
+- dotenv
+- Nodemon
+- JavaScript ES Modules
 
-Campos principales:
+---
 
-```json
-{
-  "customer": "ID_DEL_USUARIO",
-  "store": "ID_DEL_COMERCIO",
-  "deliveryAddress": "Av. Siempre Viva 742",
-  "items": [
-    {
-      "name": "Caja mediana",
-      "quantity": 2,
-      "price": 1500
-    }
-  ]
-}
+## Arquitectura del proyecto
+
+La estructura principal sigue el patrón solicitado en la consigna:
+
+```text
+src/
+│
+├── config/
+│   ├── env.config.js
+│   └── index.js
+│
+├── constants/
+│   ├── index.js
+│   ├── roles.constants.js
+│   ├── product.constants.js
+│   └── order.constants.js
+│
+├── controllers/
+│   ├── user.controller.js
+│   ├── product.controller.js
+│   ├── store.controller.js
+│   └── order.controller.js
+│
+├── errors/
+│   └── errorDictionary.js
+│
+├── models/
+│   ├── user.model.js
+│   ├── product.model.js
+│   ├── store.model.js
+│   └── order.model.js
+│
+├── repositories/
+│   ├── user.repository.js
+│   ├── product.repository.js
+│   ├── store.repository.js
+│   └── order.repository.js
+│
+├── routes/
+│   ├── user.router.js
+│   ├── product.router.js
+│   ├── store.router.js
+│   └── order.router.js
+│
+├── services/
+│   ├── user.service.js
+│   ├── product.service.js
+│   ├── store.service.js
+│   └── order.service.js
+│
+├── validators/
+│   ├── user/
+│   ├── product/
+│   ├── store/
+│   └── order/
+│
+└── utils/
+    ├── asyncHandler.js
+    ├── createError.js
+    └── validateId.js
 ```
 
-Cuando se crea un pedido, la API calcula el total automáticamente recorriendo los items.
+> La estructura puede contener utilidades adicionales según la evolución del proyecto.
+
+---
+
+## Separación entre Service y Repository
+
+Una de las decisiones principales de arquitectura fue separar completamente la lógica de negocio del acceso a datos.
+
+### Repository
+
+El Repository es la única capa que conoce directamente Mongoose y MongoDB.
+
+Ejemplos de responsabilidades:
+
+```javascript
+ProductModel.find()
+UserModel.findById(id)
+StoreModel.findByIdAndUpdate(id, data)
+OrderModel.create(data)
+```
+
+También puede encapsular decisiones propias de persistencia como:
+
+- proyecciones;
+- `populate`;
+- filtros;
+- ordenamiento;
+- consultas específicas;
+- uso de `lean()`.
+
+El Repository **no contiene lógica de negocio**.
+
+### Service
+
+El Service contiene las reglas del dominio.
+
+Ejemplos:
+
+- validar que un usuario exista;
+- validar IDs;
+- normalizar datos;
+- evitar operaciones sobre recursos inexistentes;
+- calcular el total de una orden;
+- asignar el estado inicial de un producto;
+- determinar la prioridad o estado de una orden;
+- validar que una tienda esté activa antes de crear una orden.
+
+Esto permite que los Controllers permanezcan simples y que el acceso a MongoDB quede desacoplado de las reglas de negocio.
+
+---
+
+## Variables de entorno
+
+La configuración se centraliza en:
+
+```text
+src/config/env.config.js
+```
+
+La aplicación valida al iniciar que existan las variables obligatorias.
+
+Variables requeridas:
+
+```env
+PORT=
+MONGODB_URI=
+NODE_ENV=
+```
+
+El archivo real `.env` **no debe subirse al repositorio**.
+
+El proyecto incluye:
+
+```text
+.env.example
+```
+
+con las claves necesarias pero sin valores sensibles.
 
 Ejemplo:
 
-```txt
-2 unidades x $1500 = $3000
+```env
+PORT=8080
+MONGODB_URI=your_mongodb_connection_string
+NODE_ENV=development
 ```
 
-El pedido se crea inicialmente con estado:
+Si falta una variable crítica, la aplicación debe lanzar un error descriptivo y detener el proceso antes de iniciar el servidor.
 
-```txt
-created
+---
+
+## Instalación
+
+Clonar el repositorio:
+
+```bash
+git clone <URL_DEL_REPOSITORIO>
 ```
 
-Estados posibles del pedido:
+Entrar a la carpeta del proyecto:
 
-```txt
-created
-assigned
-picked_up
-in_transit
-delivered
-cancelled
+```bash
+cd shipnow-api
 ```
 
-### Endpoints disponibles
+Instalar dependencias:
 
-### Health check
-
-Permite verificar que la API está funcionando.
-
-```http
-GET /health
+```bash
+npm install
 ```
 
-Respuesta esperada:
+Crear un archivo `.env` en la raíz del proyecto tomando como referencia `.env.example`:
 
-```json
-{
-  "status": "success",
-  "message": "API funcionando correctamente"
-}
+```env
+PORT=8080
+MONGODB_URI=your_mongodb_connection_string
+NODE_ENV=development
 ```
 
 ---
 
-## Users
+## Ejecutar el proyecto
 
-### Obtener usuarios
+Para desarrollo:
 
-```http
-GET /api/users
+```bash
+npm run dev
 ```
 
-### Obtener usuario por ID
+Si el proyecto incluye un script de producción:
 
-```http
-GET /api/users/:uid
+```bash
+npm start
 ```
 
-### Crear usuario
+El servidor debería iniciar utilizando el puerto definido en:
 
-```http
-POST /api/users
+```env
+PORT
 ```
 
-Body de ejemplo:
+Ejemplo:
 
-```json
-{
-  "firstName": "Martina",
-  "lastName": "Gómez",
-  "email": "martina@test.com",
-  "password": "123456",
-  "role": "customer"
-}
-```
-
-### Actualizar usuario
-
-```http
-PUT /api/users/:uid
-```
-
-### Eliminar usuario
-
-```http
-DELETE /api/users/:uid
+```text
+http://localhost:8080
 ```
 
 ---
 
-## Stores
+## Constantes del dominio
 
-### Obtener comercios
+Los valores repetidos del dominio se encuentran centralizados mediante objetos inmutables creados con `Object.freeze()`.
 
-```http
-GET /api/stores
+### Roles
+
+```javascript
+export const ROLES = Object.freeze({
+    ADMIN: 'admin',
+    USER: 'user'
+});
 ```
 
-### Obtener comercio por ID
+Esto evita utilizar strings mágicos como:
 
-```http
-GET /api/stores/:sid
+```javascript
+role === 'admin'
 ```
 
-### Crear comercio
+y permite utilizar:
 
-```http
-POST /api/stores
+```javascript
+role === ROLES.ADMIN
 ```
 
-Body de ejemplo:
+### Estados de productos
 
-```json
-{
-  "name": "Kiosco Centro",
-  "address": "Av. Siempre Viva 742",
-  "owner": "ID_DEL_USUARIO"
-}
+```javascript
+export const PRODUCT_STATUS = Object.freeze({
+    AVAILABLE: 'available',
+    OUT_OF_STOCK: 'out_of_stock'
+});
 ```
 
-### Actualizar comercio
+El estado del producto puede determinarse desde la capa Service de acuerdo con el stock disponible.
 
-```http
-PUT /api/stores/:sid
+---
+
+## Entidades principales de la Pre-entrega
+
+### Users
+
+La entidad User fue refactorizada siguiendo:
+
+```text
+user.router
+    ↓
+user.controller
+    ↓
+user.service
+    ↓
+user.repository
+    ↓
+user.model
 ```
 
-### Eliminar comercio
+Incluye operaciones CRUD y validaciones de negocio.
 
-```http
-DELETE /api/stores/:sid
+### Products
+
+La entidad Product utiliza la misma arquitectura:
+
+```text
+product.router
+    ↓
+product.controller
+    ↓
+product.service
+    ↓
+product.repository
+    ↓
+product.model
+```
+
+La lógica relacionada con stock y estado permanece en el Service y no en el Repository.
+
+---
+
+## Entidades adicionales
+
+Además de los requisitos obligatorios del Módulo 1, ShipNow incluye entidades adicionales del dominio.
+
+### Stores
+
+Permite administrar tiendas asociadas a un usuario propietario.
+
+El Service valida:
+
+- formato del ID;
+- existencia del propietario;
+- datos permitidos en una actualización;
+- existencia de la tienda.
+
+### Orders
+
+Permite administrar órdenes relacionadas con un customer y una store.
+
+La lógica de negocio incluye:
+
+- validación del customer;
+- validación de la store;
+- verificación de existencia de las relaciones;
+- verificación de tienda activa;
+- normalización de items;
+- cálculo del total desde el backend;
+- asignación de estado inicial;
+- asignación de prioridad.
+
+El cliente no debe controlar directamente valores sensibles como el total calculado de una orden.
+
+---
+
+## Endpoints
+
+### Users
+
+```text
+POST    /api/users
+GET     /api/users
+GET     /api/users/:uid
+PATCH   /api/users/:uid
+DELETE  /api/users/:uid
+```
+
+### Products
+
+```text
+POST    /api/products
+GET     /api/products
+GET     /api/products/:pid
+PATCH   /api/products/:pid
+DELETE  /api/products/:pid
+```
+
+### Stores
+
+```text
+POST    /api/stores
+GET     /api/stores
+GET     /api/stores/:sid
+PATCH   /api/stores/:sid
+DELETE  /api/stores/:sid
+```
+
+### Orders
+
+```text
+POST    /api/orders
+GET     /api/orders
+GET     /api/orders/:oid
+PATCH   /api/orders/:oid
+DELETE  /api/orders/:oid
 ```
 
 ---
 
-## Orders
-
-### Obtener pedidos
-
-```http
-GET /api/orders
-```
-
-### Obtener pedido por ID
-
-```http
-GET /api/orders/:oid
-```
-
-### Crear pedido
-
-```http
-POST /api/orders
-```
-
-Body de ejemplo:
+## Ejemplo de creación de una orden
 
 ```json
 {
-  "customer": "ID_DEL_USUARIO",
-  "store": "ID_DEL_COMERCIO",
-  "deliveryAddress": "Av. Siempre Viva 742",
+  "customer": "USER_OBJECT_ID",
+  "store": "STORE_OBJECT_ID",
   "items": [
     {
-      "name": "Caja mediana",
+      "name": "Teclado mecánico",
       "quantity": 2,
-      "price": 1500
+      "price": 45
     },
     {
-      "name": "Sobre chico",
+      "name": "Mouse gamer",
       "quantity": 1,
-      "price": 800
+      "price": 30
     }
-  ]
+  ],
+  "deliveryAddress": "123 Main Street",
+  "priority": "normal"
 }
 ```
 
-Respuesta esperada:
+El cliente no envía el total.
 
-```json
-{
-  "status": "success",
-  "payload": {
-    "_id": "ID_DEL_PEDIDO",
-    "customer": "ID_DEL_USUARIO",
-    "store": "ID_DEL_COMERCIO",
-    "items": [
-      {
-        "name": "Caja mediana",
-        "quantity": 2,
-        "price": 1500
-      },
-      {
-        "name": "Sobre chico",
-        "quantity": 1,
-        "price": 800
-      }
-    ],
-    "deliveryAddress": "Av. Siempre Viva 742",
-    "total": 3800,
-    "status": "created"
-  }
-}
+El Service lo calcula:
+
+```text
+(2 × 45) + (1 × 30) = 120
 ```
 
-### Actualizar estado del pedido
+y almacena la orden con un estado inicial controlado por el backend.
 
-```http
-PUT /api/orders/:oid/status
+---
+
+## Manejo de errores
+
+El proyecto utiliza un sistema centralizado de errores compuesto por:
+
+```text
+errorDictionary
+      ↓
+createError
+      ↓
+Service
+      ↓
+asyncHandler
+      ↓
+errorHandler
 ```
 
-Body de ejemplo:
+Esto permite diferenciar errores como:
 
-```json
-{
-  "status": "in_transit"
-}
+```text
+INVALID_DATA
+INVALID_ID
+USER_NOT_FOUND
+PRODUCT_NOT_FOUND
+STORE_NOT_FOUND
+ORDER_NOT_FOUND
 ```
 
-### Eliminar pedido
+Los Services detectan condiciones inválidas y lanzan errores del dominio.
 
-```http
-DELETE /api/orders/:oid
+Los Controllers no contienen bloques repetitivos de manejo de errores.
+
+---
+
+## Buenas prácticas aplicadas
+
+- Arquitectura Controller → Service → Repository.
+- Controllers sin acceso directo a Mongoose.
+- Repositories como única capa de acceso a MongoDB.
+- Services responsables de la lógica de negocio.
+- Routes mínimos.
+- Configuración de entorno centralizada.
+- Validación de variables críticas al arranque.
+- `.env` excluido del repositorio.
+- `.env.example` disponible.
+- Constantes del dominio centralizadas.
+- `Object.freeze()` para valores inmutables.
+- Validación reutilizable de ObjectId.
+- Manejo centralizado de errores.
+- Normalización de datos antes de persistir.
+- Uso de `populate()` cuando una entidad referencia otra.
+- Uso de `lean()` en consultas de lectura cuando corresponde.
+- Uso de `runValidators: true` en actualizaciones.
+
+---
+
+## Seguridad de configuración
+
+Los siguientes archivos o directorios no deben formar parte del repositorio:
+
+```text
+.env
+node_modules/
+logs/
+```
+
+Ejemplo de `.gitignore`:
+
+```gitignore
+node_modules/
+.env
+logs/
 ```
 
 ---
 
-## Formato general de respuestas
+## Prueba de robustez de configuración
 
-Las respuestas exitosas siguen una estructura simple:
+Una prueba importante de la pre-entrega consiste en eliminar temporalmente una variable crítica, por ejemplo:
 
-```json
-{
-  "status": "success",
-  "payload": {}
-}
+```env
+MONGODB_URI
 ```
 
-Las respuestas de error, en esta versión base, todavía se manejan de forma simple desde las rutas:
+Al intentar iniciar la aplicación:
 
-```json
-{
-  "status": "error",
-  "message": "Usuario no encontrado"
-}
+```bash
+npm run dev
 ```
 
-Más adelante, el proyecto será refactorizado para incorporar una capa centralizada de manejo de errores.
+el servidor debe detener el arranque y mostrar un error descriptivo indicando que falta la variable obligatoria.
 
-## Estado actual del proyecto
+La aplicación **no debe iniciar** sin la configuración mínima requerida.
 
-Esta versión base de ShipNow funciona, pero todavía no representa una API completamente profesional.
+---
 
-Actualmente el proyecto tiene:
+## Requisitos del Módulo 1 cubiertos
 
-```txt
-app.js
-server.js
-models
-routes
-config/db.js
+- [x] Carpetas `controllers/`, `services/`, `repositories/`, `models/` y `config/`.
+- [x] Arquitectura Controller → Service → Repository.
+- [x] Controllers sin imports directos de Mongoose.
+- [x] Users refactorizado a tres capas.
+- [x] Products refactorizado a tres capas.
+- [x] Routes mínimos.
+- [x] Configuración centralizada con `dotenv`.
+- [x] Variables `PORT`, `MONGODB_URI` y `NODE_ENV`.
+- [x] `.env` excluido del repositorio.
+- [x] `.env.example`.
+- [x] Roles centralizados mediante constantes.
+- [x] Estados de Product centralizados.
+- [x] Uso de `Object.freeze()`.
+- [x] Lógica de negocio ubicada en Services.
+- [x] Acceso a MongoDB encapsulado en Repositories.
+- [x] Modelos limitados a la definición de esquemas.
+- [x] README con instrucciones para ejecutar el proyecto.
+- [x] Explicación de separación entre Service y Repository.
+
+---
+
+## Autor
+
+**Terry Leoner Guzman Porras**
+
+GitHub:
+
+```text
+https://github.com/terry2315
 ```
 
-Todavía no incorpora:
+---
 
-```txt
-controllers
-services
-repositories
-middleware global de errores
-logger profesional
-Swagger
-tests automatizados
-Multer
-Docker
-```
+## Curso
 
-Durante el curso, la API será mejorada progresivamente para separar responsabilidades, mejorar la mantenibilidad y acercarse a una estructura más profesional.
+Proyecto desarrollado como parte de la formación Backend de Coderhouse.
+
+**Pre-entrega Módulo 1 — Estructura profesional de ShipNow**

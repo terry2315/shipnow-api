@@ -70,6 +70,36 @@ export const ERROR_DICTIONARY = Object.freeze({
         code: 'VERIFICATION_TOKEN_EXPIRED',
         statusCode: 400,
         message: 'El token de verificación ha expirado'
+    },
+
+    PRODUCT_NOT_FOUND: {
+        code: 'PRODUCT_NOT_FOUND',
+        statusCode: 404,
+        message: 'Producto no encontrado'
+    },
+
+    STORE_NOT_FOUND: {
+        code: 'STORE_NOT_FOUND',
+        statusCode: 404,
+        message: 'Tienda no encontrada'
+    },
+
+    ORDER_NOT_FOUND: {
+        code: 'ORDER_NOT_FOUND',
+        statusCode: 404,
+        message: 'Pedido no encontrado'
+    },
+
+    INVALID_ORDER_ITEMS: {
+        code: 'INVALID_ORDER_ITEMS',
+        statusCode: 400,
+        message: 'Los items del pedido no son válidos'
+    },
+
+    INVALID_ORDER_STATUS: {
+        code: 'INVALID_ORDER_STATUS',
+        statusCode: 400,
+        message: 'El estado del pedido no es válido'
     }
 
 });
