@@ -1,15 +1,19 @@
 import mongoose from "mongoose";
 import { env } from './env.config.js';
+import { logger } from "../config/logger.config.js";
 
-const connectDB = async () => {
-  const mongoUri = env.MONGODB_URI;
+export const connectDB = async () => {
 
-  if (!mongoUri) {
-    throw new Error("Falta la variable MONGODB_URI");
+  try {
+
+    await mongoose.connect(env.MONGODB_URI);
+
+    logger.info('Conexión a MongoDB establecida correctamente');
+
+  } catch (error) {
+
+    logger.fatal(`Error de conexión a MongoDB: ${error.message}`);
+
+    throw error;
   }
-
-  await mongoose.connect(mongoUri);
-  console.log("MongoDB conectado");
 };
-
-export default connectDB;

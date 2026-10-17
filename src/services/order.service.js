@@ -5,6 +5,7 @@ import { validateCreateOrder } from '../utils/validateCreateOrder.js';
 import { validateId } from '../utils/validateId.js';
 import { getUserByIdRepository } from '../repositories/user.repository.js';
 import { getStoreByIdRepository } from '../repositories/store.repository.js';
+import { logger } from '../config/logger.config.js';
 
 import {
     createOrderRepository,
@@ -53,7 +54,11 @@ export const createOrderService = async (data) => {
         priority: priority ?? ORDER_PRIORITY.NORMAL
     };
 
-    return createOrderRepository(newOrder);
+    const createOrder = await createOrderRepository(newOrder);
+
+    logger.info(`Pedido creado correctamente: ${createOrder._id}`);
+
+    return createOrder;
 };
 
 export const getAllOrdersService = async () => {

@@ -2,28 +2,20 @@
 
 API REST desarrollada con **Node.js**, **Express**, **MongoDB** y **Mongoose**, organizada mediante una arquitectura profesional por capas.
 
-Este README reúne el trabajo correspondiente a:
+Este README consolida el trabajo correspondiente a:
 
 - **Pre-entrega Módulo 1 — Estructura profesional de ShipNow**
 - **Pre-entrega Módulo 2 — Mocking y carga de datos de prueba**
 - **Pre-entrega Módulo 3 — Manejo profesional de errores**
+- **Pre-entrega Módulo 4 — Logging y monitoreo básico**
 
 ---
 
 ## Objetivo general
 
-ShipNow fue refactorizado para:
+ShipNow fue refactorizado para separar responsabilidades, centralizar la configuración, generar datos de prueba relacionados, manejar errores de forma uniforme y registrar eventos importantes mediante un sistema profesional de logging.
 
-- separar responsabilidades mediante una arquitectura por capas;
-- centralizar la configuración de entorno;
-- evitar acceso directo a MongoDB desde Controllers;
-- centralizar roles, estados y prioridades mediante constantes;
-- generar datos simulados coherentes con los modelos reales;
-- insertar datos de prueba relacionados en MongoDB;
-- centralizar el manejo de errores;
-- devolver respuestas HTTP consistentes y predecibles.
-
-El flujo principal de la aplicación es:
+Flujo principal:
 
 ```text
 Router
@@ -37,6 +29,15 @@ Repository
 Model / MongoDB
 ```
 
+Capas transversales:
+
+```text
+Environment Config
+Error Handler
+Request Logger
+Winston Logger
+```
+
 ---
 
 # Tecnologías utilizadas
@@ -48,6 +49,8 @@ Model / MongoDB
 - dotenv
 - bcrypt
 - `@faker-js/faker`
+- Winston
+- `winston-daily-rotate-file`
 - Nodemon
 - JavaScript ES Modules
 
@@ -59,99 +62,37 @@ Model / MongoDB
 src/
 ├── config/
 │   ├── env.config.js
-│   └── index.js
-│
+│   ├── logger.config.js
+│   └── db.config.js
 ├── constants/
-│   ├── index.js
-│   ├── roles.constants.js
-│   ├── product.constants.js
-│   ├── order.constants.js
-│   └── delivery.constants.js
-│
 ├── controllers/
-│   ├── user.controller.js
-│   ├── product.controller.js
-│   ├── store.controller.js
-│   ├── order.controller.js
-│   └── mock.controller.js
-│
 ├── errors/
-│   └── errorDictionary.js
-│
 ├── middlewares/
 │   ├── errorHandler.middleware.js
-│   └── notFound.middleware.js
-│
+│   ├── notFound.middleware.js
+│   └── requestLogger.middleware.js
 ├── mocks/
-│   ├── user.mock.js
-│   ├── courier.mock.js
-│   ├── store.mock.js
-│   ├── order.mock.js
-│   └── delivery.mock.js
-│
 ├── models/
-│   ├── user.model.js
-│   ├── product.model.js
-│   ├── store.model.js
-│   ├── order.model.js
-│   └── delivery.model.js
-│
 ├── repositories/
-│   ├── user.repository.js
-│   ├── product.repository.js
-│   ├── store.repository.js
-│   ├── order.repository.js
-│   └── mock.repository.js
-│
 ├── routes/
-│   ├── user.router.js
-│   ├── product.router.js
-│   ├── store.router.js
-│   ├── order.router.js
-│   └── mock.router.js
-│
 ├── services/
-│   ├── user.service.js
-│   ├── product.service.js
-│   ├── store.service.js
-│   ├── order.service.js
-│   └── mock.service.js
-│
 ├── utils/
-│   ├── asyncHandler.js
-│   ├── createError.js
-│   ├── hash.js
-│   └── validateId.js
-|   
+├── validators/
+├── app.js
+└── server.js
 ```
-
-> La estructura puede contener archivos auxiliares adicionales según la evolución del proyecto.
 
 ---
 
 # Instalación
 
-Clonar el repositorio:
-
 ```bash
 git clone <URL_DEL_REPOSITORIO>
-```
-
-Entrar al proyecto:
-
-```bash
 cd shipnow-api
-```
-
-Instalar dependencias:
-
-```bash
 npm install
 ```
 
-Crear un archivo `.env` en la raíz tomando como referencia `.env.example`.
-
-Ejemplo:
+Crear `.env` usando `.env.example` como referencia:
 
 ```env
 PORT=8080
@@ -159,7 +100,7 @@ MONGODB_URI=your_mongodb_connection_string
 NODE_ENV=development
 ```
 
-Ejecutar en desarrollo:
+Ejecutar:
 
 ```bash
 npm run dev
@@ -167,43 +108,11 @@ npm run dev
 
 ---
 
-# Variables de entorno
-
-La configuración se centraliza en:
-
-```text
-src/config/env.config.js
-```
-
-Variables requeridas:
-
-```text
-PORT
-MONGODB_URI
-NODE_ENV
-```
-
-La aplicación valida las variables al iniciar.
-
-Si falta una variable crítica, por ejemplo:
-
-```text
-MONGODB_URI
-```
-
-la aplicación debe mostrar un error descriptivo y detener el arranque.
-
-El archivo real `.env` no debe subirse al repositorio.
-
-Se incluye `.env.example` sin valores sensibles.
-
----
-
 # Módulo 1 — Estructura profesional de ShipNow
 
 ## Objetivo
 
-Refactorizar la API base a una arquitectura profesional de tres capas:
+Refactorizar la API utilizando:
 
 ```text
 Controller → Service → Repository
@@ -211,75 +120,63 @@ Controller → Service → Repository
 
 y centralizar la configuración de entorno.
 
----
-
-## Responsabilidad de cada capa
-
 ### Controller
 
-El Controller es la puerta de entrada HTTP.
-
-Responsabilidades:
-
-- recibir `req`;
-- extraer `params`, `query` y `body`;
-- invocar el Service;
-- devolver respuestas exitosas.
-
-No contiene lógica de negocio ni accede a Mongoose directamente.
-
-Ejemplo:
-
-```javascript
-export const getUserById = async (req, res) => {
-    const { uid } = req.params;
-
-    const user = await getUserByIdService(uid);
-
-    return res.status(200).json({
-        status: 'success',
-        payload: user
-    });
-};
-```
+- recibe `req`;
+- extrae `params`, `query` y `body`;
+- invoca al Service;
+- devuelve respuestas exitosas;
+- no contiene lógica de negocio;
+- no accede directamente a Mongoose.
 
 ### Service
 
-Contiene las reglas del dominio.
+Contiene:
 
-Ejemplos:
-
-- validar IDs;
-- normalizar datos;
-- comprobar existencia de entidades;
-- validar relaciones;
-- calcular totales;
-- definir estados;
-- validar actualizaciones parciales;
-- lanzar errores de dominio.
+- validaciones;
+- normalización;
+- reglas del dominio;
+- comprobación de entidades;
+- relaciones;
+- cálculo de totales;
+- estados;
+- prioridades;
+- errores del dominio.
 
 ### Repository
 
-Es la única capa que conoce directamente MongoDB/Mongoose.
+Es la capa que conoce MongoDB/Mongoose.
 
-Responsabilidades típicas:
+Puede utilizar:
 
-- `find`;
-- `findById`;
-- `findByIdAndUpdate`;
-- `findByIdAndDelete`;
-- `insertMany`;
-- filtros;
-- proyecciones;
-- `populate`;
-- `sort`;
-- `lean`.
-
-El Repository no contiene lógica de negocio.
+```text
+find
+findById
+findByIdAndUpdate
+findByIdAndDelete
+insertMany
+populate
+sort
+lean
+```
 
 ---
 
-## Constantes del dominio
+## Variables de entorno
+
+Se centralizan variables como:
+
+```text
+PORT
+MONGODB_URI
+NODE_ENV
+```
+
+El archivo `.env` no se sube al repositorio.
+
+---
+
+## Constantes
 
 ### Roles
 
@@ -291,7 +188,7 @@ export const ROLES = Object.freeze({
 });
 ```
 
-### Estados de Product
+### Product
 
 ```javascript
 export const PRODUCT_STATUS = Object.freeze({
@@ -300,28 +197,21 @@ export const PRODUCT_STATUS = Object.freeze({
 });
 ```
 
-### Estados y prioridad de Order
-
-Los pedidos utilizan:
+Además se utilizan:
 
 ```text
 ORDER_STATUS
 ORDER_PRIORITY
-```
-
-### Estados de Delivery
-
-Las entregas utilizan:
-
-```text
 DELIVERY_STATUS
 ```
 
-El objetivo es evitar strings mágicos dispersos.
+para evitar strings mágicos.
 
 ---
 
-## Users
+## Endpoints
+
+### Users
 
 ```text
 POST    /api/users
@@ -331,23 +221,7 @@ PATCH   /api/users/:uid
 DELETE  /api/users/:uid
 ```
 
-Flujo:
-
-```text
-user.router
-   ↓
-user.controller
-   ↓
-user.service
-   ↓
-user.repository
-   ↓
-user.model
-```
-
----
-
-## Products
+### Products
 
 ```text
 POST    /api/products
@@ -357,27 +231,7 @@ PATCH   /api/products/:pid
 DELETE  /api/products/:pid
 ```
 
-Flujo:
-
-```text
-product.router
-   ↓
-product.controller
-   ↓
-product.service
-   ↓
-product.repository
-   ↓
-product.model
-```
-
-La lógica relacionada con stock y estado permanece en el Service.
-
----
-
-## Stores
-
-Entidad adicional del dominio:
+### Stores
 
 ```text
 POST    /api/stores
@@ -387,18 +241,7 @@ PATCH   /api/stores/:sid
 DELETE  /api/stores/:sid
 ```
 
-Se valida:
-
-- ID de Store;
-- existencia del owner;
-- actualización parcial;
-- `isActive`;
-- `STORE_NOT_FOUND`;
-- `USER_NOT_FOUND`.
-
----
-
-## Orders
+### Orders
 
 ```text
 POST    /api/orders
@@ -408,25 +251,13 @@ PATCH   /api/orders/:oid
 DELETE  /api/orders/:oid
 ```
 
-El backend controla reglas como:
-
-- existencia de `customer`;
-- existencia de `store`;
-- tienda activa;
-- validación de items;
-- cálculo del total;
-- status inicial;
-- prioridad permitida.
-
-El cliente no controla directamente el total calculado del pedido.
-
 ---
 
 # Módulo 2 — Mocking y carga de datos de prueba
 
 ## Objetivo
 
-Generar datos simulados de:
+Generar datos simulados mediante `@faker-js/faker` para:
 
 ```text
 Users
@@ -435,176 +266,26 @@ Orders
 Deliveries
 ```
 
-sin depender de carga manual y manteniendo relaciones coherentes con los modelos reales.
-
-Se utiliza:
-
-```text
-@faker-js/faker
-```
-
----
-
-## Arquitectura de mocks
-
-```text
-/api/mocks
-   ↓
-mock.router.js
-   ↓
-mock.controller.js
-   ↓
-mock.service.js
-   ↓
-mock.repository.js
-   ↓
-MongoDB
-```
-
-Generadores:
-
-```text
-src/mocks/
-├── user.mock.js
-├── courier.mock.js
-├── store.mock.js
-├── order.mock.js
-└── delivery.mock.js
-```
-
 ---
 
 ## Endpoints sin persistencia
 
-### Usuarios
-
-```http
+```text
 GET /api/mocks/users?qty=3
-```
-
-Ejemplo:
-
-```json
-{
-  "status": "success",
-  "quantity": 3,
-  "payload": [
-    {
-      "_id": "dcef01b23af92eaaccdbfdd2",
-      "firstName": "Patti",
-      "lastName": "Little",
-      "email": "patti.little98.krsxy7@yahoo.com",
-      "role": "user",
-      "documents": []
-    }
-  ]
-}
-```
-
-La contraseña no se expone.
-
-### Couriers
-
-```http
 GET /api/mocks/couriers?qty=3
-```
-
-Los registros utilizan:
-
-```text
-role = courier
-```
-
-### Orders
-
-```http
 GET /api/mocks/orders?qty=3
-```
-
-Ejemplo:
-
-```json
-{
-  "status": "success",
-  "quantity": 3,
-  "payload": [
-    {
-      "customer": "bdb617ad1dfb07d4f3bbed03",
-      "store": "a1c6feeec3ecedf59ae2ae8d",
-      "items": [
-        {
-          "name": "Sleek Metal Soap",
-          "quantity": 1,
-          "price": 175.74
-        }
-      ],
-      "deliveryAddress": "42017 Luigi Burg",
-      "total": 175.74,
-      "status": "delivered",
-      "priority": "normal"
-    }
-  ]
-}
-```
-
-El total se calcula a partir de:
-
-```text
-price × quantity
-```
-
-### Deliveries
-
-```http
 GET /api/mocks/deliveries?qty=3
 ```
 
-Ejemplo:
-
-```json
-{
-  "status": "success",
-  "quantity": 3,
-  "payload": [
-    {
-      "order": "e7e72a47b1d4beb1f06b586e",
-      "courier": "ba89dd7c0e190bb548e0eeea",
-      "status": "assigned",
-      "assignedAt": "2026-10-12T08:27:44.629Z",
-      "deliveredAt": null
-    }
-  ]
-}
-```
-
-Reglas básicas:
-
-```text
-pending
-→ courier = null
-→ assignedAt = null
-→ deliveredAt = null
-
-assigned / picked_up / in_transit
-→ courier = ObjectId
-→ assignedAt = Date
-→ deliveredAt = null
-
-delivered
-→ courier = ObjectId
-→ assignedAt = Date
-→ deliveredAt = Date
-```
+Estos endpoints no guardan datos en MongoDB.
 
 ---
 
-## Seed en MongoDB
+## Seed
 
 ```http
 POST /api/mocks/seed?qty=3
 ```
-
-No necesita body.
 
 Ejemplo:
 
@@ -622,91 +303,60 @@ Ejemplo:
 }
 ```
 
-Con `qty=3` se generan:
-
-```text
-3 users
-3 couriers
-1 store auxiliar
-3 orders
-3 deliveries
-```
-
 ---
 
 ## Relaciones del seed
 
-Las entidades se insertan en un orden controlado:
-
 ```text
 Users + Couriers
        ↓
-      IDs
-       ↓
 Stores
        ↓
-      IDs
-       ↓
 Orders
-       ↓
-      IDs
        ↓
 Deliveries
 ```
 
-Relaciones persistidas:
+Relaciones:
 
 ```text
-Store.owner
-→ User existente
-
-Order.customer
-→ User existente
-
-Order.store
-→ Store existente
-
-Delivery.order
-→ Order existente
-
-Delivery.courier
-→ User con role = courier
+Store.owner → User
+Order.customer → User
+Order.store → Store
+Delivery.order → Order
+Delivery.courier → User con role courier
 ```
 
-Los IDs utilizados durante la persistencia son los `_id` reales devueltos por MongoDB.
+Los `_id` persistidos provienen de MongoDB.
 
 ---
 
 ## Sincronización Order ↔ Delivery
 
 ```text
-ORDER                  DELIVERY
-
-created          →     pending
-assigned         →     assigned
-picked_up        →     picked_up
-in_transit       →     in_transit
-delivered        →     delivered
-cancelled        →     cancelled
+created       → pending
+assigned      → assigned
+picked_up     → picked_up
+in_transit    → in_transit
+delivered     → delivered
+cancelled     → cancelled
 ```
 
 ---
 
-## Passwords de mocks
+## Passwords
 
-Antes de persistir Users y Couriers:
+Los usuarios mock que se persisten pasan por:
 
 ```text
-password generada
-      ↓
+password mock
+   ↓
 passwordHash()
-      ↓
+   ↓
 bcrypt
-      ↓
+   ↓
 MongoDB
 ```
-
-No se almacenan passwords en texto plano.
 
 ---
 
@@ -724,14 +374,6 @@ Valor por defecto:
 10
 ```
 
-Ejemplo:
-
-```http
-GET /api/mocks/users
-```
-
-genera 10 usuarios.
-
 Casos inválidos:
 
 ```text
@@ -747,7 +389,7 @@ qty=101
 
 ## Objetivo
 
-Centralizar el manejo de errores para evitar respuestas aisladas en Routes o Controllers.
+Centralizar las respuestas de error.
 
 Flujo:
 
@@ -769,21 +411,11 @@ errorHandler
 HTTP Response
 ```
 
-Los Services detectan errores de negocio.
-
-El middleware global construye la respuesta HTTP.
-
 ---
 
 ## Diccionario de errores
 
-Archivo:
-
-```text
-src/errors/errorDictionary.js
-```
-
-Casos utilizados o previstos por el dominio:
+Ejemplos:
 
 ```text
 INVALID_DATA
@@ -801,90 +433,20 @@ ROUTE_NOT_FOUND
 INTERNAL_SERVER_ERROR
 ```
 
-Ejemplo:
-
-```javascript
-INVALID_ID: {
-    code: 'INVALID_ID',
-    statusCode: 400,
-    message: 'El identificador proporcionado es inválido'
-}
-```
-
 ---
 
-## Errores personalizados
-
-La aplicación utiliza una fábrica común:
-
-```text
-src/utils/createError.js
-```
+## Formato uniforme
 
 Ejemplo:
-
-```javascript
-throw createError(
-    ERROR_DICTIONARY.USER_NOT_FOUND
-);
-```
-
-Con detalles:
-
-```javascript
-throw createError({
-    ...ERROR_DICTIONARY.INVALID_DATA,
-    details: {
-        email: 'Formato inválido'
-    }
-});
-```
-
----
-
-## asyncHandler
-
-Los Controllers asíncronos se envuelven con:
-
-```javascript
-asyncHandler(controller)
-```
-
-Ejemplo:
-
-```javascript
-router.get(
-    '/:uid',
-    asyncHandler(getUserById)
-);
-```
-
-Esto permite enviar errores al middleware global sin repetir `try/catch`.
-
----
-
-## Middleware global de errores
-
-Formato uniforme:
 
 ```json
 {
   "status": "error",
-  "code": "INVALID_DATA",
-  "message": "Los datos proporcionados son inválidos",
+  "code": "INVALID_MOCK_QUANTITY",
+  "message": "La cantidad de datos de prueba es inválida",
   "details": {
-    "campo": "Descripción del problema"
+    "qty": "La cantidad debe ser un número entero entre 1 y 100"
   }
-}
-```
-
-Cuando no existen detalles:
-
-```json
-{
-  "status": "error",
-  "code": "USER_NOT_FOUND",
-  "message": "Usuario no encontrado"
 }
 ```
 
@@ -900,360 +462,511 @@ Para errores inesperados:
 
 ---
 
-## Ruta inexistente
+# Módulo 4 — Logging y monitoreo básico
+
+## Objetivo
+
+Incorporar un sistema profesional de logging con **Winston**, integrado con la arquitectura y el manejo de errores existente.
+
+Se utiliza:
+
+```text
+winston
+winston-daily-rotate-file
+```
+
+---
+
+## Niveles personalizados
+
+```javascript
+const levels = {
+    fatal: 0,
+    error: 1,
+    warning: 2,
+    info: 3,
+    http: 4,
+    debug: 5
+};
+```
+
+Niveles:
+
+```text
+debug
+http
+info
+warning
+error
+fatal
+```
+
+---
+
+## Uso de niveles
+
+```text
+debug
+→ información detallada de desarrollo
+
+http
+→ peticiones HTTP
+
+info
+→ eventos exitosos importantes
+
+warning
+→ errores esperados o situaciones anormales controladas
+
+error
+→ fallos técnicos o inesperados
+
+fatal
+→ fallas críticas de arranque o infraestructura
+```
+
+---
+
+## Formato
+
+Cada log incluye:
+
+```text
+timestamp + nivel + mensaje
+```
 
 Ejemplo:
 
-```http
-GET /api/no-existe
-```
-
-Respuesta esperada:
-
-```json
-{
-  "status": "error",
-  "code": "ROUTE_NOT_FOUND",
-  "message": "Ruta no encontrada"
-}
-```
-
-HTTP:
-
 ```text
-404
+2026-10-17 11:23:46 [info] Conexión a MongoDB establecida correctamente
+2026-10-17 11:23:46 [info] Servidor ShipNow escuchando en el puerto 8080
+2026-10-17 11:26:00 [warning] INVALID_MOCK_QUANTITY - La cantidad de datos de prueba es inválida
 ```
 
 ---
 
-## Errores de dominio
+## Development
 
-### ID inválido
+Con:
 
-```http
-GET /api/users/123
+```env
+NODE_ENV=development
 ```
 
-Esperado:
+se muestran:
 
 ```text
-400 INVALID_ID
-```
-
-### Usuario inexistente
-
-```http
-GET /api/users/000000000000000000000001
-```
-
-Esperado:
-
-```text
-404 USER_NOT_FOUND
-```
-
-### Producto inexistente
-
-```text
-404 PRODUCT_NOT_FOUND
-```
-
-### Store inexistente
-
-```text
-404 STORE_NOT_FOUND
-```
-
-### Order inexistente
-
-```text
-404 ORDER_NOT_FOUND
+debug
+http
+info
+warning
+error
+fatal
 ```
 
 ---
 
-## Errores del módulo de mocks
+## Production
+
+Con:
+
+```env
+NODE_ENV=production
+```
+
+se muestran:
+
+```text
+info
+warning
+error
+fatal
+```
+
+No se muestran:
+
+```text
+debug
+http
+```
+
+La prueba se realizó con:
+
+```bash
+NODE_ENV=production npm run dev
+```
+
+y el comportamiento fue verificado.
+
+---
+
+## MongoDB
+
+Conexión correcta:
+
+```text
+[info] Conexión a MongoDB establecida correctamente
+```
+
+Fallo crítico:
+
+```text
+[fatal] Error al conectar con MongoDB: ...
+```
+
+---
+
+## Servidor
+
+Inicio correcto:
+
+```text
+[info] Servidor ShipNow escuchando en el puerto 8080
+```
+
+Los errores críticos de arranque se registran como `fatal`.
+
+---
+
+## Request logger
+
+Archivo:
+
+```text
+src/middlewares/requestLogger.middleware.js
+```
 
 Ejemplos:
 
-```http
-GET /api/mocks/users?qty=0
-GET /api/mocks/users?qty=-1
-GET /api/mocks/users?qty=abc
-GET /api/mocks/users?qty=101
+```text
+[http] GET /api/logger-test 200 - 4ms
+[http] GET /api/mocks/users?qty=-1 400 - 2ms
 ```
 
-Respuesta uniforme esperada:
-
-```json
-{
-  "status": "error",
-  "code": "INVALID_MOCK_QUANTITY",
-  "message": "La cantidad de datos de prueba es inválida",
-  "details": {
-    "qty": "La cantidad debe ser un número entero entre 1 y 100"
-  }
-}
-```
-
-HTTP:
+Registra:
 
 ```text
-400
+método HTTP
+ruta
+status
+duración
 ```
 
 ---
 
-## Fallos durante el seed
+## Integración con errorHandler
 
-Los fallos inesperados durante la persistencia de mocks deben convertirse en un error controlado:
+Los errores esperados 4xx se registran como:
 
 ```text
-MOCK_SEED_FAILED
+warning
 ```
 
 Ejemplo:
 
-```json
-{
-  "status": "error",
-  "code": "MOCK_SEED_FAILED",
-  "message": "No fue posible insertar los datos de prueba"
-}
+```text
+[warning] INVALID_MOCK_QUANTITY - La cantidad de datos de prueba es inválida - GET /api/mocks/users?qty=-1
 ```
 
-Los errores de dominio ya conocidos deben conservar su identidad y no transformarse innecesariamente.
+Los errores inesperados o de servidor se registran como:
+
+```text
+error
+```
+
+Las fallas críticas de inicio se registran como:
+
+```text
+fatal
+```
 
 ---
 
-# Resumen de endpoints
+## Logging en mocks
 
-## Users
-
-```text
-POST    /api/users
-GET     /api/users
-GET     /api/users/:uid
-PATCH   /api/users/:uid
-DELETE  /api/users/:uid
-```
-
-## Products
+Generación simple:
 
 ```text
-POST    /api/products
-GET     /api/products
-GET     /api/products/:pid
-PATCH   /api/products/:pid
-DELETE  /api/products/:pid
+debug
 ```
 
-## Stores
+Ejemplo:
 
 ```text
-POST    /api/stores
-GET     /api/stores
-GET     /api/stores/:sid
-PATCH   /api/stores/:sid
-DELETE  /api/stores/:sid
+[debug] Generando 10 usuarios mock
 ```
 
-## Orders
+Seed iniciado:
 
 ```text
-POST    /api/orders
-GET     /api/orders
-GET     /api/orders/:oid
-PATCH   /api/orders/:oid
-DELETE  /api/orders/:oid
+[info] Iniciando seed de 3 registros
 ```
 
-## Mocks
+Seed completado:
 
 ```text
-GET   /api/mocks/users?qty=3
-GET   /api/mocks/couriers?qty=3
-GET   /api/mocks/orders?qty=3
-GET   /api/mocks/deliveries?qty=3
-POST  /api/mocks/seed?qty=3
+[info] Seed completado: 3 users, 3 couriers, 1 stores, 3 orders y 3 deliveries
 ```
+
+Fallo técnico de seed:
+
+```text
+error
+```
+
+---
+
+## Logging de Orders
+
+Después de que el Repository confirma la creación:
+
+```text
+[info] Pedido creado correctamente: <orderId>
+```
+
+Esto evita registrar una creación exitosa antes de confirmar la persistencia.
+
+---
+
+## Endpoint de prueba
+
+```http
+GET /api/logger-test
+```
+
+Respuesta:
+
+```json
+{
+  "status": "success",
+  "message": "Todos los niveles del logger fueron ejecutados"
+}
+```
+
+En development genera:
+
+```text
+debug
+http
+info
+warning
+error
+fatal
+```
+
+En production no muestra `debug` ni `http`.
+
+---
+
+## Persistencia de logs
+
+Los niveles:
+
+```text
+error
+fatal
+```
+
+se guardan en:
+
+```text
+logs/error-YYYY-MM-DD.log
+```
+
+No se guardan allí:
+
+```text
+debug
+http
+info
+warning
+```
+
+---
+
+## Rotación
+
+Se utiliza `winston-daily-rotate-file`.
+
+La configuración permite:
+
+- rotación por fecha;
+- limitar tamaño;
+- limitar días conservados;
+- compresión de archivos antiguos;
+- mantener un audit file de control.
+
+---
+
+## Gitignore
+
+```gitignore
+node_modules
+.env
+logs/
+uploads
+coverage
+npm-debug.log
+```
+
+Los archivos de logs generados localmente no se suben al repositorio.
+
+---
+
+## Auditoría de console.*
+
+Se ejecutó:
+
+```bash
+grep -RIn "console\." src
+```
+
+No quedaron usos de:
+
+```text
+console.log
+console.error
+console.warn
+console.info
+```
+
+Los mensajes relevantes fueron reemplazados por Winston.
 
 ---
 
 # Pruebas realizadas
 
-## Módulo 1
+## Logger test en development
+
+```http
+GET /api/logger-test
+```
+
+Comprobado:
 
 ```text
-CRUD Users                      ✅
-CRUD Products                   ✅
-CRUD Stores                     ✅
-CRUD Orders                     ✅
-INVALID_ID                      ✅
-*_NOT_FOUND                     ✅
-PATCH parcial                   ✅
+debug      ✅
+http       ✅
+info       ✅
+warning    ✅
+error      ✅
+fatal      ✅
 ```
 
-## Módulo 2
+## Archivo de errores
+
+Comprobado:
 
 ```text
-GET /api/mocks/users?qty=1          ✅
-GET /api/mocks/users                ✅ default 10
-GET /api/mocks/couriers?qty=3       ✅
-GET /api/mocks/orders?qty=3         ✅
-GET /api/mocks/deliveries?qty=3     ✅
-POST /api/mocks/seed?qty=3          ✅
-
-qty=0                               ✅ 400
-qty=-1                              ✅ 400
-qty=abc                             ✅ 400
-qty=101                             ✅ 400
+error      ✅ persistido
+fatal      ✅ persistido
+warning    ❌ no persistido
+info       ❌ no persistido
+http       ❌ no persistido
+debug      ❌ no persistido
 ```
 
-MongoDB:
+## Error de mocks
+
+```http
+GET /api/mocks/users?qty=-1
+```
+
+Resultado:
 
 ```text
-users creados                   ✅
-couriers creados                ✅
-roles correctos                 ✅
-passwords hasheados             ✅
-stores creadas                  ✅
-orders creadas                  ✅
-deliveries creadas              ✅
-relaciones ObjectId             ✅
-Order ↔ Delivery coherentes     ✅
+400 INVALID_MOCK_QUANTITY
 ```
 
-## Módulo 3 — pruebas finales
+Con logs:
 
 ```text
-GET /api/users/123
-→ 400 INVALID_ID
-
-GET /api/users/<ObjectId inexistente>
-→ 404 USER_NOT_FOUND
-
-GET /api/products/<ObjectId inexistente>
-→ 404 PRODUCT_NOT_FOUND
-
-GET /api/stores/<ObjectId inexistente>
-→ 404 STORE_NOT_FOUND
-
-GET /api/orders/<ObjectId inexistente>
-→ 404 ORDER_NOT_FOUND
-
-GET /api/mocks/users?qty=0
-→ 400 INVALID_MOCK_QUANTITY
-
-GET /api/mocks/users?qty=abc
-→ 400 INVALID_MOCK_QUANTITY
-
-GET /api/no-existe
-→ 404 ROUTE_NOT_FOUND
+[warning] INVALID_MOCK_QUANTITY ...
+[http] GET /api/mocks/users?qty=-1 400 - 2ms
 ```
 
----
+El warning no se guarda en `error.log`.
 
-# Seguridad y Git
+## Production
 
-No deben subirse:
+Comprobado:
 
 ```text
-.env
-node_modules/
-logs/
+info       ✅
+warning    ✅
+error      ✅
+fatal      ✅
+debug      ❌
+http       ❌
 ```
-
-Ejemplo de `.gitignore`:
-
-```gitignore
-node_modules/
-.env
-logs/
-```
-
-Antes de hacer push:
-
-```bash
-git status
-```
-
-Verificar que `.env` y `node_modules` no aparezcan entre los archivos a subir.
 
 ---
 
 # Checklist Módulo 1
 
 - [x] Arquitectura Controller → Service → Repository.
-- [x] Carpetas `controllers/`, `services/`, `repositories/`, `models/` y `config/`.
-- [x] Controllers sin acceso directo a Mongoose.
+- [x] Configuración centralizada.
 - [x] Users refactorizado.
 - [x] Products refactorizado.
-- [x] Routes mínimos.
-- [x] Configuración centralizada.
-- [x] Validación de `PORT`, `MONGODB_URI` y `NODE_ENV`.
-- [x] `.env` excluido.
+- [x] Constantes del dominio.
 - [x] `.env.example`.
-- [x] Roles mediante constantes.
-- [x] Estados mediante constantes.
-- [x] Uso de `Object.freeze()`.
-- [x] Separación clara entre Service y Repository.
-
----
+- [x] `.env` ignorado.
 
 # Checklist Módulo 2
 
-- [x] Router `/api/mocks`.
-- [x] Arquitectura por capas.
-- [x] Mock de Users.
-- [x] Mock de Couriers.
-- [x] Mock de Orders.
-- [x] Mock de Deliveries.
-- [x] Endpoints sin persistencia.
+- [x] Mock Users.
+- [x] Mock Couriers.
+- [x] Mock Orders.
+- [x] Mock Deliveries.
 - [x] Seed controlado.
-- [x] Relaciones reales mediante ObjectId.
-- [x] Roles válidos.
-- [x] Estados y prioridades válidos.
+- [x] Relaciones ObjectId.
 - [x] Passwords hasheados.
 - [x] Validación de `qty`.
-- [x] Sincronización Order ↔ Delivery.
-
----
+- [x] Order ↔ Delivery sincronizados.
 
 # Checklist Módulo 3
 
-- [x] Fábrica de errores personalizados.
+- [x] Errores personalizados.
 - [x] Diccionario centralizado.
-- [x] Middleware global de errores.
+- [x] Middleware global.
 - [x] `asyncHandler`.
-- [x] Errores detectados principalmente desde Services.
-- [x] Formato uniforme de respuesta.
-- [x] Mocks integrados al sistema de errores.
-- [x] Validación controlada de cantidades inválidas.
-- [ ] Confirmar auditoría final de Controllers y Routes.
-- [ ] Confirmar manejo controlado de fallo de seed/MongoDB.
-- [ ] Ejecutar pruebas finales antes de entregar.
+- [x] Formato uniforme.
+- [x] Mocks integrados.
+- [x] `INVALID_MOCK_QUANTITY`.
+- [x] `MOCK_SEED_FAILED`.
+
+# Checklist Módulo 4
+
+- [x] Winston.
+- [x] Logger centralizado.
+- [x] `debug`.
+- [x] `http`.
+- [x] `info`.
+- [x] `warning`.
+- [x] `error`.
+- [x] `fatal`.
+- [x] Development y production diferenciados.
+- [x] MongoDB integrado.
+- [x] Server integrado.
+- [x] ErrorHandler integrado.
+- [x] Mocks integrados.
+- [x] Request logger.
+- [x] `/api/logger-test`.
+- [x] Persistencia de `error` y `fatal`.
+- [x] Rotación.
+- [x] `logs/` ignorado.
+- [x] Auditoría de `console.*`.
+- [x] README actualizado.
 
 ---
 
 # Commits sugeridos
 
-Módulo 1:
-
 ```bash
 git commit -m "feat: complete module 1 layered architecture"
-```
-
-Módulo 2:
-
-```bash
 git commit -m "feat: complete module 2 mocking and seed system"
-```
-
-Módulo 3:
-
-```bash
 git commit -m "feat: complete module 3 centralized error handling"
+git commit -m "feat: complete module 4 logging and monitoring"
 ```
 
 ---
@@ -1274,10 +987,4 @@ https://github.com/terry2315
 
 Proyecto desarrollado como parte de la formación Backend de Coderhouse.
 
-Incluye:
-
-```text
-Pre-entrega Módulo 1 — Estructura profesional de ShipNow
-Pre-entrega Módulo 2 — Mocking y carga de datos de prueba
-Pre-entrega Módulo 3 — Manejo profesional de errores
-```
+Incluye las pre-entregas de los módulos 1, 2, 3 y 4 de ShipNow API.

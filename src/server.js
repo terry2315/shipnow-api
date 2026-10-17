@@ -1,8 +1,9 @@
 import "dotenv/config";
 import app from "./app.js";
-import connectDB from "./config/db.js";
+import { connectDB } from "./config/db.js";
 import { env } from './config/env.config.js';
 import dns from 'node:dns';
+import { logger } from "./config/logger.config.js";
 
 
 dns.setServers(['1.1.1.1', '8.8.8.8']);
@@ -13,11 +14,18 @@ const startServer = async () => {
   try {
     await connectDB();
 
-    app.listen(PORT, () => {
-      console.log(`Servidor escuchando en el puerto ${PORT}`);
+    const server = app.listen(PORT, () => {
+      logger.info(`Servidor Shipnow escuchando en el puerto ${PORT}`);
     });
+
+    server.on('error', (error) => {
+      logger.fatal(`Error critico del servidor: ${error.message}`)
+    },
+      process.exitCode = 1
+    );
+
   } catch (error) {
-    console.error(`Error al iniciar el servidor: ${error.message}`);
+    logger.fatal(`Error al arrancar el servidor: ${error.message}`);
     process.exit(1);
   }
 };
