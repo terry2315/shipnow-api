@@ -31,9 +31,10 @@ const validateQuantity = (qty) => {
         quantity > 100
     ) {
         throw createError({
-            ...ERROR_DICTIONARY.INVALID_DATA,
+            ...ERROR_DICTIONARY.INVALID_MOCK_QUANTITY,
             details: {
-                qty: 'La cantidad debe ser un número entero entre 1 y 100'
+                qty:
+                    'La cantidad debe ser un número entero entre 1 y 100'
             }
         });
     }
@@ -141,88 +142,81 @@ export const getMockDeliveriesService = async (qty) => {
 export const seedMocksService = async (qty) => {
     const quantity = validateQuantity(qty);
 
-    const users = generateMockUsers(quantity);
+    try {
 
-    const hashedUsers = await Promise.all(
-        users.map(async (user) => ({
-            ...user,
-            password: await passwordHash(user.password)
-        }))
-    );
 
-    const couriers = generateMockCouriers(quantity);
+        const users = generateMockUsers(quantity);
 
-    const hashedCouriers = await Promise.all(
-        couriers.map(async (courier) => ({
-            ...courier,
-            password: await passwordHash(courier.password)
-        }))
-    );
+        const hashedUsers = await Promise.all(
+            users.map(async (user) => ({
+                ...user,
+                password: await passwordHash(user.password)
+            }))
+        );
 
-    const insertedUsers = await insertMockUsersRepository([
-        ...hashedUsers,
-        ...hashedCouriers
-    ]);
+        const couriers = generateMockCouriers(quantity);
 
-    const persistedCustomers = insertedUsers.slice(
-        0,
-        hashedUsers.length
-    );
+        const hashedCouriers = await Promise.all(
+            couriers.map(async (courier) => ({
+                ...courier,
+                password: await passwordHash(courier.password)
+            }))
+        );
 
-    const persistedCouriers = insertedUsers.slice(
-        hashedUsers.length
-    );
+        const insertedUsers = await insertMockUsersRepository([
+            ...hashedUsers,
+            ...hashedCouriers
+        ]);
 
-    const customerIds = persistedCustomers.map(
-        (user) => user._id
-    );
+        const persistedCustomers = insertedUsers.slice(0, hashedUsers.length);
 
-    const storeQuantity = Math.max(
-        1,
-        Math.ceil(quantity / 3)
-    );
+        const persistedCouriers = insertedUsers.slice(hashedUsers.length);
 
-    const stores = generateMockStores({
-        quantity: storeQuantity,
-        ownerIds: customerIds
-    });
+        const customerIds = persistedCustomers.map((user) => user._id);
 
-    const insertedStores =
-        await insertMockStoresRepository(stores);
+        const storeQuantity = Math.max(1, Math.ceil(quantity / 3));
 
-    const storeIds = insertedStores.map(
-        (store) => store._id
-    );
+        const stores = generateMockStores({
+            quantity: storeQuantity,
+            ownerIds: customerIds
+        });
 
-    const orders = generateMockOrders({
-        quantity,
-        customerIds,
-        storeIds
-    });
+        const insertedStores =
+            await insertMockStoresRepository(stores);
 
-    const insertedOrders =
-        await insertMockOrdersRepository(orders);
+        const storeIds = insertedStores.map((store) => store._id);
 
-    const courierIds = persistedCouriers.map(
-        (courier) => courier._id
-    );
+        const orders = generateMockOrders({
+            quantity,
+            customerIds,
+            storeIds
+        });
 
-    const deliveries =
-        generateMockDeliveriesFromOrders({
+        const insertedOrders = await insertMockOrdersRepository(orders);
+
+        const courierIds = persistedCouriers.map((courier) => courier._id);
+
+        const deliveries = generateMockDeliveriesFromOrders({
             orders: insertedOrders,
             courierIds
         });
 
-    const insertedDeliveries =
-        await insertMockDeliveriesRepository(
-            deliveries
-        );
+        const insertedDeliveries = await insertMockDeliveriesRepository(deliveries);
 
-    return {
-        users: persistedCustomers.length,
-        couriers: persistedCouriers.length,
-        stores: insertedStores.length,
-        orders: insertedOrders.length,
-        deliveries: insertedDeliveries.length
-    };
+        return {
+            users: persistedCustomers.length,
+            couriers: persistedCouriers.length,
+            stores: insertedStores.length,
+            orders: insertedOrders.length,
+            deliveries: insertedDeliveries.length
+        };
+    } catch (error) {
+
+        if (error.isOperational) {
+            throw error;
+        }
+
+        throw createError(ERROR_DICTIONARY.MOCK_SEED_FAILED);
+
+    }
 };

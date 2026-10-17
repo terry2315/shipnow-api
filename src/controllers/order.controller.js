@@ -11,8 +11,7 @@ export const createOrder = async (req, res) => {
 
     const data = req.body;
 
-    const newOrder =
-        await createOrderService(data);
+    const newOrder = await createOrderService(data);
 
     return res.status(201).json({
         status: 'success',
@@ -23,8 +22,7 @@ export const createOrder = async (req, res) => {
 
 export const getAllOrders = async (req, res) => {
 
-    const orders =
-        await getAllOrdersService();
+    const orders = await getAllOrdersService();
 
     return res.status(200).json({
         status: 'success',
@@ -36,8 +34,7 @@ export const getOrderById = async (req, res) => {
 
     const { oid } = req.params;
 
-    const order =
-        await getOrderByIdService(oid);
+    const order = await getOrderByIdService(oid);
 
     return res.status(200).json({
         status: 'success',
@@ -50,11 +47,10 @@ export const updateOrder = async (req, res) => {
     const { oid } = req.params;
     const data = req.body;
 
-    const updatedOrder =
-        await updateOrderService(
-            oid,
-            data
-        );
+    const updatedOrder = await updateOrderService(
+        oid,
+        data
+    );
 
     return res.status(200).json({
         status: 'success',
@@ -63,13 +59,11 @@ export const updateOrder = async (req, res) => {
     });
 };
 
-
 export const deleteOrder = async (req, res) => {
 
     const { oid } = req.params;
 
-    const deletedOrder =
-        await deleteOrderService(oid);
+    const deletedOrder = await deleteOrderService(oid);
 
     return res.status(200).json({
         status: 'success',
