@@ -60,7 +60,7 @@
  *                 status:
  *                   type: string
  *                   example: success
- *                  message: 
+ *                 message:
  *                   type: string
  *                   example: Pedido creado exitosamente
  *                 payload:
@@ -325,6 +325,9 @@
  *                 status:
  *                   type: string
  *                   example: success
+ *                 message:
+ *                   type: string
+ *                   example: Pedido eliminado exitosamente
  *                 payload:
  *                   $ref: '#/components/schemas/Order'
  *

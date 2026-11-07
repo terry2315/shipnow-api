@@ -42,14 +42,6 @@ app.use('/api/logger-test', loggerRouter);
 
 app.use('/api/docs', docsRouter);
 
-app.use((req, res) => {
-  res.status(404).json({
-    status: "error",
-    message: "Ruta no encontrada"
-  });
-});
-
-
 app.use(notFoundHandler);
 
 app.use(errorHandler);

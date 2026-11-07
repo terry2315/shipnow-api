@@ -1,6 +1,8 @@
 import dotenv from 'dotenv';
 
-dotenv.config();
+const envFile = process.env.NODE_ENV === 'test' ? '.env.test' : '.env';
+
+dotenv.config({ path: envFile });
 
 const requiredEnvVariables = [
     'PORT',
@@ -10,9 +12,11 @@ const requiredEnvVariables = [
 
 for (const variable of requiredEnvVariables) {
     if (!process.env[variable]) {
-        throw new Error(`Falta la variable de entorno obligatoria: ${variable}`);
+        throw new Error(
+            `Falta la variable de entorno obligatoria: ${variable}`
+        );
     }
-};
+}
 
 export const env = Object.freeze({
     PORT: process.env.PORT,
