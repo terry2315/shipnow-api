@@ -11,6 +11,8 @@ import { notFoundHandler } from "./middlewares/notFound.middleware.js";
 import { errorHandler } from './middlewares/errorHandler.middleware.js';
 import { requestLogger } from './middlewares/requestLogger.middleware.js';
 
+import docsRouter from './routes/docks.router.js';
+
 const app = express();
 
 app.use(cors());
@@ -37,6 +39,8 @@ app.use("/api/orders", ordersRouter);
 app.use('/api/products', productRouter);
 app.use('/api/mocks', mockRouter);
 app.use('/api/logger-test', loggerRouter);
+
+app.use('/api/docs', docsRouter);
 
 app.use((req, res) => {
   res.status(404).json({

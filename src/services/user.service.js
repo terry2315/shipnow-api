@@ -69,7 +69,7 @@ export const getUserByIdService = async (id) => {
     }
 
     if (!validateId(id)) {
-        throw createError(ERROR_DICTIONARY.INVALID_DATA);
+        throw createError(ERROR_DICTIONARY.INVALID_ID);
     }
 
     const user = await getUserByIdRepository(id);
@@ -84,12 +84,8 @@ export const getUserByIdService = async (id) => {
 
 export const updateUserService = async (id, data) => {
 
-    if (!id) {
-        throw createError(ERROR_DICTIONARY.INVALID_DATA);
-    }
-
-    if (!validateId(id)) {
-        throw createError(ERROR_DICTIONARY.USER_NOT_FOUND);
+    if (!id || !validateId(id)) {
+        throw createError(ERROR_DICTIONARY.INVALID_ID);
     }
 
     const newErrors = validateUpdateUser(data);
@@ -119,12 +115,8 @@ export const updateUserService = async (id, data) => {
 };
 
 export const deleteUserService = async (id) => {
-    if (!id) {
-        throw createError(ERROR_DICTIONARY.INVALID_DATA);
-    }
-
-    if (!validateId(id)) {
-        throw createError(ERROR_DICTIONARY.USER_NOT_FOUND);
+    if (!id || !validateId(id)) {
+        throw createError(ERROR_DICTIONARY.INVALID_ID);
     }
 
     const deleteUser = await deleteUserRepository(id);
