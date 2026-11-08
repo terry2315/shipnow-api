@@ -4,6 +4,44 @@
  *
  *   schemas:
  *
+ *     FileMetadata:
+ *       type: object
+ *       properties:
+ *         originalName:
+ *           type: string
+ *           example: identity.png
+ *
+ *         filename:
+ *           type: string
+ *           example: 1794149883447-ba3f6f1a-e465-48c4-b9de-db53892d1cec.png
+ *
+ *         path:
+ *           type: string
+ *           example: uploads/users/documents/1794149883447-ba3f6f1a-e465-48c4-b9de-db53892d1cec.png
+ *
+ *         mimeType:
+ *           type: string
+ *           enum:
+ *             - application/pdf
+ *             - image/jpeg
+ *             - image/png
+ *           example: image/png
+ *
+ *         size:
+ *           type: integer
+ *           minimum: 0
+ *           example: 4858250
+ *
+ *         documentType:
+ *           type: string
+ *           example: identity
+ *
+ *         uploadedAt:
+ *           type: string
+ *           format: date-time
+ *           example: 2026-11-08T14:58:03.504Z
+ *
+ *
  *     User:
  *       type: object
  *       properties:
@@ -35,7 +73,7 @@
  *         documents:
  *           type: array
  *           items:
- *             type: object
+ *             $ref: '#/components/schemas/FileMetadata'
  *
  *         createdAt:
  *           type: string
@@ -141,6 +179,11 @@
  *             - normal
  *             - high
  *           example: normal
+ *
+ *         proofs:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/FileMetadata'
  *
  *         createdAt:
  *           type: string

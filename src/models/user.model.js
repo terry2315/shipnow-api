@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import { ROLES } from "../constants/roles.constants.js";
+import { fileMetadataSchema } from './fileMetadata.schema.js'
 
 const userSchema = new mongoose.Schema(
   {
@@ -31,7 +32,7 @@ const userSchema = new mongoose.Schema(
       default: ROLES.USER
     },
     documents: {
-      type: Array,
+      type: [fileMetadataSchema],
       default: []
     }
 

@@ -76,6 +76,42 @@ export const ERROR_DICTIONARY = Object.freeze({
         code: 'INTERNAL_SERVER_ERROR',
         statusCode: 500,
         message: 'Error interno del servidor'
-    }
+    },
+
+    FILE_REQUIRED: {
+        code: 'FILE_REQUIRED',
+        statusCode: 400,
+        message: 'El archivo es obligatorio'
+    },
+
+    FILE_TYPE_INVALID: {
+        code: 'FILE_TYPE_INVALID',
+        statusCode: 400,
+        message: 'El tipo de archivo no está permitido'
+    },
+
+    FILE_TOO_LARGE: {
+        code: 'FILE_TOO_LARGE',
+        statusCode: 413,
+        message: 'El archivo supera el tamaño máximo permitido'
+    },
+
+    FILE_FIELD_INVALID: {
+        code: 'FILE_FIELD_INVALID',
+        statusCode: 400,
+        message: 'El campo de archivo enviado es inválido'
+    },
+
+    DOCUMENT_TYPE_INVALID: {
+        code: 'DOCUMENT_TYPE_INVALID',
+        statusCode: 400,
+        message: 'El tipo de documento no es válido'
+    },
+
+    FILE_SAVE_FAILED: {
+        code: 'FILE_SAVE_FAILED',
+        statusCode: 500,
+        message: 'No fue posible guardar el archivo'
+    },
 
 });

@@ -47,3 +47,20 @@ export const deleteUserRepository = async (id) => {
         .findByIdAndDelete(id)
         .select('-password');
 };
+
+export const addUserDocumentRepository = async (userId, document) => {
+
+    return await UserModel.findByIdAndUpdate(
+        userId,
+        {
+            $push: { documents: document }
+        },
+        {
+            new: true,
+            runValidators: true
+        }
+    )
+        .select('-password')
+        .lean();
+
+};

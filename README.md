@@ -16,11 +16,13 @@ Este README consolida el trabajo correspondiente a:
 
 \- **\*\*\\*\\*Pre-entrega Módulo 6 — Testing funcional automatizado\\*\\*\*\***
 
+- **Pre-entrega Módulo 7 — Carga de archivos, documentos y comprobantes con Multer**
+
 \\---
 
 **\*\*## Objetivo general\*\***
 
-ShipNow fue refactorizado para separar responsabilidades, centralizar la configuración, generar datos de prueba relacionados, manejar errores de forma uniforme, registrar eventos importantes mediante un sistema profesional de logging, exponer documentación técnica interactiva mediante Swagger / OpenAPI y validar funcionalmente los principales endpoints mediante una suite automatizada de testing.
+ShipNow fue refactorizado para separar responsabilidades, centralizar la configuración, generar datos de prueba relacionados, manejar errores de forma uniforme, registrar eventos importantes mediante un sistema profesional de logging, exponer documentación técnica interactiva mediante Swagger / OpenAPI, validar funcionalmente los principales endpoints mediante una suite automatizada de testing e incorporar carga segura de archivos con Multer para documentos de usuarios y comprobantes asociados a pedidos.
 
 Flujo principal:
 
@@ -92,6 +94,8 @@ Winston Logger
 
 \- Cross-env
 
+- Multer
+
 \\- JavaScript ES Modules
 
 \\---
@@ -107,6 +111,10 @@ src/
 │   ├── env.config.js
 
 │   ├── logger.config.js
+
+│   ├── swagger.config.js
+
+│   ├── upload.config.js
 
 │   └── db.config.js
 
@@ -124,7 +132,9 @@ src/
 
 │   ├── mocks.swagger.js
 
-│   └── logger.swagger.js
+│   ├── logger.swagger.js
+
+│   └── uploads.swagger.js
 
 ├── errors/
 
@@ -134,11 +144,15 @@ src/
 
 │   ├── notFound.middleware.js
 
-│   └── requestLogger.middleware.js
+│   ├── requestLogger.middleware.js
+
+│   └── uploads.middleware.js
 
 ├── mocks/
 
 ├── models/
+
+│   └── fileMetadata.schema.js
 
 ├── repositories/
 
@@ -2323,6 +2337,7 @@ tests/
 ├── order.test.js
 ├── routes.test.js
 ├── swagger.test.js
+├── uploads.test.js
 └── user.test.js
 ```
 
@@ -2594,6 +2609,8 @@ Segunda ejecución consecutiva:
 
 Esto confirma que las pruebas son repetibles y no dependen del estado previo de la base de datos.
 
+> Nota: al finalizar el Módulo 6 la suite contaba con 20 tests. Tras incorporar el Módulo 7, la suite completa del proyecto pasó a 29 tests.
+
 ---
 
 ## Seguridad de archivos de entorno
@@ -2658,6 +2675,570 @@ Las credenciales reales de MongoDB no deben subirse al repositorio.
 
 ---
 
+
+---
+
+# Módulo 7 — Carga de archivos, documentos y comprobantes con Multer
+
+## Objetivo
+
+Incorporar carga de archivos mediante `multipart/form-data` utilizando **Multer**, con una configuración centralizada y separada de las rutas, validaciones específicas, almacenamiento físico organizado y persistencia exclusiva de metadatos en MongoDB.
+
+La implementación cubre:
+
+```text
+User  → Document
+Order → Proof
+```
+
+Los archivos binarios se guardan fuera de MongoDB. La base de datos conserva únicamente los metadatos necesarios para relacionarlos con la entidad correspondiente.
+
+---
+
+## Dependencia
+
+Se incorporó:
+
+```bash
+npm install multer
+```
+
+Multer procesa solicitudes:
+
+```text
+multipart/form-data
+```
+
+---
+
+## Configuración centralizada
+
+Archivo:
+
+```text
+src/config/upload.config.js
+```
+
+Responsabilidades:
+
+```text
+Destino de almacenamiento
+Nombre generado
+Tipos MIME aceptados
+Tamaño máximo
+Cantidad máxima de archivos
+Manejo inicial de errores de Multer
+```
+
+Límite configurado:
+
+```text
+5 MB
+5242880 bytes
+```
+
+Tipos MIME permitidos:
+
+```text
+application/pdf
+image/jpeg
+image/png
+```
+
+---
+
+## Constantes de uploads
+
+Archivo:
+
+```text
+src/constants/uploads.constants.js
+```
+
+Se centralizan:
+
+```text
+MAX_SIZE
+USER_DOCUMENT_FIELD
+ORDER_PROOF_FIELD
+ALLOWED_MIME_TYPES
+USER_DOCUMENT_TYPES
+ORDER_PROOF_TYPE
+```
+
+Campos esperados:
+
+```text
+document
+proof
+```
+
+Tipos de documento permitidos:
+
+```text
+identity
+passport
+driver_license
+```
+
+Para comprobantes de pedidos se utiliza:
+
+```text
+order_proof
+```
+
+---
+
+## Organización física
+
+```text
+uploads/
+├── users/
+│   └── documents/
+├── orders/
+│   └── proofs/
+└── test/
+```
+
+Durante testing se utiliza:
+
+```text
+uploads/test/
+```
+
+La carpeta completa está excluida del repositorio mediante:
+
+```gitignore
+uploads
+```
+
+---
+
+## Nombres únicos
+
+Los nombres se generan usando:
+
+```text
+timestamp + UUID + extensión
+```
+
+Ejemplo:
+
+```text
+1794155804437-9b17c099-03ef-455d-9ab8-b6cd1b1aa0fa.png
+```
+
+---
+
+## Metadatos
+
+Schema reutilizable:
+
+```text
+src/models/fileMetadata.schema.js
+```
+
+MongoDB almacena:
+
+```text
+originalName
+filename
+path
+mimeType
+size
+documentType
+uploadedAt
+```
+
+Ejemplo:
+
+```json
+{
+  "originalName": "identity.png",
+  "filename": "1794155804437-9b17c099-03ef-455d-9ab8-b6cd1b1aa0fa.png",
+  "path": "uploads/users/documents/1794155804437-9b17c099-03ef-455d-9ab8-b6cd1b1aa0fa.png",
+  "mimeType": "image/png",
+  "size": 4858250,
+  "documentType": "identity",
+  "uploadedAt": "2026-11-08T14:58:03.504Z"
+}
+```
+
+---
+
+## Documentos de usuario
+
+Endpoint:
+
+```http
+POST /api/users/:uid/documents
+```
+
+Body:
+
+```text
+multipart/form-data
+```
+
+Campos:
+
+```text
+document       File
+documentType   Text
+```
+
+Flujo:
+
+```text
+Request
+  ↓
+Multer
+  ↓
+Validar archivo
+  ↓
+Validar uid
+  ↓
+Validar documentType
+  ↓
+Confirmar User
+  ↓
+Construir metadata
+  ↓
+Guardar metadata en User.documents
+  ↓
+201 Created
+```
+
+Mensaje exitoso:
+
+```text
+Documento cargado exitosamente
+```
+
+---
+
+## Comprobantes de pedidos
+
+Endpoint:
+
+```http
+POST /api/orders/:oid/proofs
+```
+
+Campo:
+
+```text
+proof   File
+```
+
+Flujo:
+
+```text
+Request
+  ↓
+Multer
+  ↓
+Validar archivo
+  ↓
+Validar oid
+  ↓
+Confirmar Order
+  ↓
+Construir metadata
+  ↓
+Guardar metadata en Order.proofs
+  ↓
+201 Created
+```
+
+Tipo almacenado:
+
+```text
+order_proof
+```
+
+Mensaje exitoso:
+
+```text
+Comprobante cargado exitosamente
+```
+
+---
+
+## Limpieza de archivos huérfanos
+
+Si Multer ya guardó un archivo pero una validación posterior falla, el archivo físico se elimina.
+
+Ejemplos:
+
+```text
+documentType inválido
+usuario inexistente
+pedido inexistente
+error de persistencia
+```
+
+Flujo:
+
+```text
+Multer guarda archivo
+      ↓
+Service detecta error
+      ↓
+removeUploadedFile()
+      ↓
+Archivo físico eliminado
+      ↓
+Error centralizado
+```
+
+---
+
+## Errores de archivos
+
+Se agregaron al diccionario centralizado:
+
+```text
+FILE_REQUIRED
+FILE_TYPE_INVALID
+FILE_TOO_LARGE
+FILE_FIELD_INVALID
+DOCUMENT_TYPE_INVALID
+FILE_SAVE_FAILED
+```
+
+También se reutilizan:
+
+```text
+INVALID_ID
+USER_NOT_FOUND
+ORDER_NOT_FOUND
+```
+
+Ejemplo:
+
+```json
+{
+  "status": "error",
+  "code": "FILE_TYPE_INVALID",
+  "message": "El tipo de archivo no está permitido"
+}
+```
+
+Archivo mayor a 5 MB:
+
+```json
+{
+  "status": "error",
+  "code": "FILE_TOO_LARGE",
+  "message": "El archivo supera el tamaño máximo permitido",
+  "details": {
+    "maxSize": 5242880
+  }
+}
+```
+
+Status:
+
+```text
+413 Request Entity Too Large
+```
+
+---
+
+## Middleware de uploads
+
+Archivo:
+
+```text
+src/middlewares/uploads.middleware.js
+```
+
+Los errores de Multer se transforman al formato estándar de ShipNow.
+
+```text
+LIMIT_FILE_SIZE       → FILE_TOO_LARGE
+LIMIT_UNEXPECTED_FILE → FILE_FIELD_INVALID
+MISSING_FIELD_NAME    → FILE_FIELD_INVALID
+```
+
+---
+
+## Logging
+
+Los uploads están integrados con Winston.
+
+Ejemplos:
+
+```text
+[info] Documento cargado correctamente para usuario <userId>: <filename>
+[info] Comprobante <filename> asociado al pedido <orderId>
+[warning] FILE_REQUIRED - El archivo es obligatorio
+[warning] DOCUMENT_TYPE_INVALID - El tipo de documento no es válido
+[warning] FILE_TYPE_INVALID - El tipo de archivo no está permitido
+```
+
+---
+
+## Swagger
+
+Se agregó:
+
+```text
+src/docs/uploads.swagger.js
+```
+
+También se incorporó el schema reutilizable:
+
+```text
+FileMetadata
+```
+
+Endpoints documentados:
+
+```text
+POST /api/users/{uid}/documents
+POST /api/orders/{oid}/proofs
+```
+
+Swagger utiliza `multipart/form-data` y permite seleccionar archivos desde Swagger UI.
+
+Relaciones documentadas:
+
+```text
+User.documents[] → FileMetadata
+Order.proofs[]   → FileMetadata
+```
+
+---
+
+## Pruebas manuales
+
+### User documents
+
+```text
+Carga correcta                  → 201
+Archivo faltante                → 400 FILE_REQUIRED
+documentType inválido           → 400 DOCUMENT_TYPE_INVALID
+Usuario inexistente             → 404 USER_NOT_FOUND
+Tipo de archivo inválido        → 400 FILE_TYPE_INVALID
+```
+
+### Order proofs
+
+```text
+Carga correcta                  → 201
+Archivo faltante                → 400 FILE_REQUIRED
+Pedido inexistente              → 404 ORDER_NOT_FOUND
+Tipo de archivo inválido        → 400 FILE_TYPE_INVALID
+Archivo mayor a 5 MB            → 413 FILE_TOO_LARGE
+```
+
+También se verificó el cleanup de archivos huérfanos.
+
+---
+
+## Tests funcionales de uploads
+
+Archivo:
+
+```text
+tests/uploads.test.js
+```
+
+Casos automatizados:
+
+```text
+User documents
+- Carga correcta.
+- FILE_REQUIRED.
+- DOCUMENT_TYPE_INVALID.
+- USER_NOT_FOUND.
+- FILE_TYPE_INVALID.
+
+Order proofs
+- Carga correcta.
+- FILE_REQUIRED.
+- ORDER_NOT_FOUND.
+- FILE_TYPE_INVALID.
+```
+
+Los archivos de prueba se generan en memoria con Supertest.
+
+---
+
+## Limpieza durante testing
+
+Antes y después de los casos se elimina:
+
+```text
+uploads/test/
+```
+
+Esto impide que una ejecución contamine a la siguiente.
+
+---
+
+## Resultado final de la suite
+
+Después de incorporar el Módulo 7:
+
+```text
+29 passing
+0 failing
+```
+
+La suite completa fue ejecutada dos veces consecutivas con el mismo resultado:
+
+```text
+Primera ejecución: 29 passing
+Segunda ejecución: 29 passing
+```
+
+Esto confirma:
+
+```text
+Tests repetibles                 ✅
+DB de testing aislada            ✅
+Uploads de testing aislados      ✅
+Cleanup funcionando              ✅
+Sin dependencia de datos previos ✅
+```
+
+---
+
+## Checklist Módulo 7
+
+- [x] Multer instalado.
+- [x] Configuración centralizada.
+- [x] Destinos organizados por entidad.
+- [x] Nombres únicos.
+- [x] Tipos MIME permitidos.
+- [x] Límite máximo de 5 MB.
+- [x] Validación de archivo obligatorio.
+- [x] Validación del campo esperado.
+- [x] Validación de tipo de documento.
+- [x] Documentos asociados a Users.
+- [x] Comprobantes asociados a Orders.
+- [x] Metadatos almacenados en MongoDB.
+- [x] Binarios almacenados fuera de MongoDB.
+- [x] Cleanup de archivos huérfanos.
+- [x] `FILE_REQUIRED`.
+- [x] `FILE_TYPE_INVALID`.
+- [x] `FILE_TOO_LARGE`.
+- [x] `FILE_FIELD_INVALID`.
+- [x] `DOCUMENT_TYPE_INVALID`.
+- [x] `FILE_SAVE_FAILED`.
+- [x] Integración con Winston.
+- [x] Swagger `multipart/form-data`.
+- [x] Schema reutilizable `FileMetadata`.
+- [x] Tests funcionales de uploads.
+- [x] Suite completa con 29 tests passing.
+- [x] Suite ejecutada dos veces consecutivas.
+- [x] `uploads/` protegido mediante `.gitignore`.
+- [x] README actualizado.
+
+
 **\*\*# Commits sugeridos\*\***
 
 \\\`\\\`\\\`bash
@@ -2673,6 +3254,8 @@ git commit -m "feat: complete module 4 logging and monitoring"
 git commit -m "feat: complete module 5 swagger api documentation"
 
 git commit -m "feat: complete module 6 functional testing"
+
+git commit -m "feat: complete module 7 file uploads and proofs"
 
 \\\`\\\`\\\`
 
@@ -2696,4 +3279,4 @@ https\\://github.com/terry2315
 
 Proyecto desarrollado como parte de la formación Backend de Coderhouse.
 
-Incluye las pre-entregas de los módulos 1, 2, 3, 4, 5 y 6 de ShipNow API.
+Incluye las pre-entregas de los módulos 1, 2, 3, 4, 5, 6 y 7 de ShipNow API.

@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import { ORDER_STATUS, ORDER_PRIORITY } from '../constants/order.constants.js';
+import { fileMetadataSchema } from './fileMetadata.schema.js';
 
 const orderItemSchema = new mongoose.Schema(
   {
@@ -67,6 +68,10 @@ const orderSchema = new mongoose.Schema(
       type: String,
       enum: Object.values(ORDER_PRIORITY),
       default: ORDER_PRIORITY.NORMAL
+    },
+    proofs: {
+      type: [fileMetadataSchema],
+      default: []
     }
   },
   {

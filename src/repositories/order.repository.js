@@ -71,3 +71,18 @@ export const deleteOrderRepository = async (id) => {
             'name address isActive'
         );
 };
+
+export const addOrderProofRepository = async (orderId, proof) => {
+
+    return await OrderModel.findByIdAndUpdate(
+        orderId,
+        {
+            $push: { proofs: proof }
+        },
+        {
+            new: true,
+            runValidators: true
+        }
+    )
+        .lean();
+};
